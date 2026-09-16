@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#6d28d9" />
+  <title>فرقعة البالونات الملونة</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root { --ink: #24134f; --glass: rgba(255,255,255,.84); }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; overflow: hidden; min-height: 100vh; color: var(--ink);
+      font-family: "Trebuchet MS", "Arial Rounded MT Bold", Arial, sans-serif;
+      background: linear-gradient(135deg, #7c3aed 0%, #ec4899 42%, #f97316 100%);
+    }
+    body::before, body::after { content: ""; position: fixed; z-index: -1; border-radius: 50%; filter: blur(2px); opacity: .5; }
+    body::before { width: 45vw; height: 45vw; top: -16vw; right: -10vw; background: #22d3ee; }
+    body::after { width: 38vw; height: 38vw; bottom: -16vw; left: -10vw; background: #facc15; }
+    .glass { background: var(--glass); border: 3px solid rgba(255,255,255,.78); box-shadow: 0 14px 36px rgba(46,16,101,.25); backdrop-filter: blur(12px); }
+    #game-container { isolation: isolate; }
+    .balloon {
+      position: absolute; bottom: -150px; width: clamp(64px, 11vw, 104px); height: clamp(82px, 13vw, 124px);
+      border-radius: 50% 50% 48% 48% / 42% 42% 58% 58%; cursor: pointer; z-index: 2;
+      box-shadow: inset -14px -18px 22px rgba(74, 13, 91, .22), inset 12px 12px 13px rgba(255,255,255,.38), 0 10px 16px rgba(67,20,100,.22);
+      touch-action: manipulation; user-select: none;
+      animation: floatUp linear forwards;
+    }
+    .balloon::before { content:""; position:absolute; width: 24%; height: 16%; left: 19%; top: 12%; border-radius: 50%; background: rgba(255,255,255,.7); transform: rotate(-28deg); filter: blur(1px); }
+    .balloon::after { content:""; position:absolute; bottom:-34px; left:50%; width:2px; height:42px; background:rgba(255,255,255,.85); transform:translateX(-50%); }
+    .balloon-knot { position:absolute; left:50%; bottom:-7px; width:12px; height:12px; background:inherit; transform:translateX(-50%) rotate(45deg); }
+    .bg-red-balloon { background: radial-gradient(circle at 30% 25%, #fecaca, #f43f5e 45%, #be123c); }
+    .bg-blue-balloon { background: radial-gradient(circle at 30% 25%, #cffafe, #22d3ee 45%, #2563eb); }
+    .bg-green-balloon { background: radial-gradient(circle at 30% 25%, #d9f99d, #34d399 45%, #059669); }
+    .bg-yellow-balloon { background: radial-gradient(circle at 30% 25%, #fef9c3, #facc15 45%, #f59e0b); }
+    .bg-purple-balloon { background: radial-gradient(circle at 30% 25%, #e9d5ff, #c084fc 45%, #7e22ce); }
+    .bg-orange-balloon { background: radial-gradient(circle at 30% 25%, #fed7aa, #fb923c 45%, #ea580c); }
+    @keyframes floatUp { 0% { transform: translateY(0) rotate(-5deg); } 50% { transform: translateY(-52vh) rotate(5deg); } 100% { transform: translateY(-125vh) rotate(-6deg); } }
+    @keyframes pulse { 50% { transform: scale(1.08); } }
+    @keyframes popAnim { 0% { transform: scale(.35) rotate(0); opacity: 1; } 100% { transform: scale(1.7) rotate(35deg); opacity: 0; } }
+    @keyframes scoreFloat { 0% { transform: translate(-50%, 0) scale(.7); opacity: 0; } 20% { opacity: 1; } 100% { transform: translate(-50%, -90px) scale(1.2); opacity: 0; } }
+    .target-pulse { animation: pulse .8s ease-in-out infinite; }
+    .pop-effect { position: fixed; width: 120px; height: 120px; pointer-events:none; z-index: 20; border: 9px dotted rgba(255,255,255,.95); border-radius:50%; animation: popAnim .42s ease-out forwards; filter: drop-shadow(0 0 8px #fff); }
+    .score-float { position: fixed; z-index: 30; pointer-events:none; color:#fff; font-size:1.7rem; font-weight:900; text-shadow: 2px 3px 0 #7e22ce; animation: scoreFloat .75s ease-out forwards; }
+    #feedback-message { pointer-events:none; text-shadow: 3px 4px 0 rgba(73,20,120,.7); transition: opacity .25s, transform .25s; }
+    .timer-danger { color:#e11d48 !important; animation: pulse .45s infinite; }
+    .progress-track { height: 9px; background: rgba(109,40,217,.16); border-radius: 99px; overflow:hidden; }
+    #time-progress { height:100%; width:100%; border-radius:inherit; background: linear-gradient(90deg,#22c55e,#facc15,#f43f5e); transition: width .3s linear; }
+    button { transition: transform .15s, box-shadow .15s; }
+    button:hover { transform: translateY(-2px); box-shadow: 0 7px 14px rgba(76,29,149,.2); }
+    button:active { transform: scale(.96); }
+    @media (max-width: 640px) { .hud-title { font-size: 1rem; } .target-name { font-size: 1.55rem; } }
+  </style>
+</head>
+<body class="h-screen w-screen flex flex-col items-center p-3 sm:p-5">
+  <header class="glass w-full max-w-4xl rounded-[2rem] p-3 sm:p-4 z-10">
+    <div class="flex items-center justify-between gap-2 sm:gap-4">
+      <div class="text-center min-w-[72px]"><div class="text-xs sm:text-sm font-bold opacity-70">النقاط</div><div id="score" class="text-2xl sm:text-3xl font-black text-violet-700">0</div></div>
+      <div class="text-center flex-1"><div class="hud-title text-base sm:text-xl font-black">اضغط على البالون</div><div id="target-color-text" class="target-name target-pulse text-2xl sm:text-4xl font-black text-rose-600">أحمر</div></div>
+      <div class="text-center min-w-[72px]"><div class="text-xs sm:text-sm font-bold opacity-70">الوقت</div><div id="timer" class="text-2xl sm:text-3xl font-black text-violet-700">60</div></div>
+      <button id="sound-btn" aria-label="تبديل الصوت" class="text-xl sm:text-2xl rounded-2xl bg-cyan-100 px-3 py-2">🔊</button>
+    </div>
+    <div class="progress-track mt-3"><div id="time-progress"></div></div>
+  </header>
+
+  <main id="game-container" class="relative w-full max-w-5xl flex-1 min-h-0"></main>
+  <div id="feedback-message" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-4xl sm:text-7xl font-black opacity-0 z-30">رائع!</div>
+
+  <div id="start-screen" class="glass absolute inset-0 m-auto z-40 w-[min(90%,440px)] h-fit rounded-[2rem] p-7 text-center">
+    <div class="text-6xl mb-3">🎈</div><h1 class="text-3xl sm:text-4xl font-black text-violet-800">فرقعة البالونات</h1>
+    <p class="mt-3 text-base sm:text-lg font-bold leading-relaxed">اتبع اللون المطلوب واجمع أكبر عدد من النقاط خلال دقيقة واحدة!</p>
+    <button id="start-btn" class="mt-5 w-full rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-500 py-3 text-xl font-black text-white">ابدأ اللعب ✨</button>
+  </div>
+  <div id="end-screen" class="glass absolute inset-0 m-auto z-40 hidden w-[min(90%,440px)] h-fit rounded-[2rem] p-7 text-center">
+    <div class="text-6xl mb-3">🏆</div><h2 class="text-3xl sm:text-4xl font-black text-violet-800">انتهى الوقت!</h2>
+    <p class="mt-3 text-xl font-bold">نتيجتك: <span id="final-score" class="text-3xl text-fuchsia-600">0</span></p>
+    <button id="restart-btn" class="mt-5 w-full rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-500 py-3 text-xl font-black text-white">العب مرة أخرى 🔁</button>
+  </div>
+
+  <script>
+    const colors = [
+      { id:'red', name:'أحمر', bg:'bg-red-balloon', text:'text-rose-600' }, { id:'blue', name:'أزرق', bg:'bg-blue-balloon', text:'text-blue-600' },
+      { id:'green', name:'أخضر', bg:'bg-green-balloon', text:'text-emerald-600' }, { id:'yellow', name:'أصفر', bg:'bg-yellow-balloon', text:'text-amber-500' },
+      { id:'purple', name:'بنفسجي', bg:'bg-purple-balloon', text:'text-purple-700' }, { id:'orange', name:'برتقالي', bg:'bg-orange-balloon', text:'text-orange-600' }
+    ];
+    const game = document.getElementById('game-container'), targetText = document.getElementById('target-color-text'), scoreEl = document.getElementById('score');
+    const timerEl = document.getElementById('timer'), progress = document.getElementById('time-progress'), feedback = document.getElementById('feedback-message');
+    const startScreen = document.getElementById('start-screen'), endScreen = document.getElementById('end-screen'), finalScore = document.getElementById('final-score');
+    const soundBtn = document.getElementById('sound-btn');
+    let target, score = 0, seconds = 60, spawnTimer, clockTimer, running = false, soundEnabled = true, audioCtx;
+
+    function ensureAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
+    function playSound(type) {
+      if (!soundEnabled) return; ensureAudio(); const now = audioCtx.currentTime, osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      const settings = { pop:['sine', 720, 110, .12, .24], yay:['triangle', 520, 780, .35, .22], wrong:['sawtooth', 210, 130, .25, .12], end:['sine', 330, 165, .55, .18] }[type];
+      osc.type = settings[0]; osc.frequency.setValueAtTime(settings[1], now); osc.frequency.exponentialRampToValueAtTime(settings[2], now + settings[3]);
+      gain.gain.setValueAtTime(settings[4], now); gain.gain.exponentialRampToValueAtTime(.001, now + settings[3]); osc.start(now); osc.stop(now + settings[3]);
+      if (type === 'yay') setTimeout(() => playTone(660), 110);
+    }
+    function playTone(freq) { if (!soundEnabled || !audioCtx) return; const o=audioCtx.createOscillator(),g=audioCtx.createGain(),n=audioCtx.currentTime;o.type='triangle';o.frequency.value=freq;o.connect(g);g.connect(audioCtx.destination);g.gain.setValueAtTime(.18,n);g.gain.exponentialRampToValueAtTime(.001,n+.22);o.start(n);o.stop(n+.22); }
+    function setNextTarget() { target = colors[Math.floor(Math.random()*colors.length)]; targetText.textContent = target.name; targetText.className = `target-name target-pulse text-2xl sm:text-4xl font-black ${target.text}`; }
+    function showFeedback(text, color) { feedback.textContent=text; feedback.style.color=color; feedback.style.opacity='1'; feedback.style.transform='translate(-50%,-50%) scale(1.12)'; clearTimeout(showFeedback.timer); showFeedback.timer=setTimeout(()=>{feedback.style.opacity='0';feedback.style.transform='translate(-50%,-50%) scale(1)'},650); }
+    function showPopEffect(el, correct) { const r=el.getBoundingClientRect(), p=document.createElement('div');p.className='pop-effect';p.style.left=`${r.left+r.width/2-60}px`;p.style.top=`${r.top+r.height/2-60}px`;p.style.borderColor=correct?'#fff':'#fda4af';document.body.appendChild(p);setTimeout(()=>p.remove(),450); }
+    function floatPoints(el, amount) { const r=el.getBoundingClientRect(), n=document.createElement('div');n.className='score-float';n.textContent=amount>0?`+${amount}`:'-1';n.style.left=`${r.left+r.width/2}px`;n.style.top=`${r.top}px`;document.body.appendChild(n);setTimeout(()=>n.remove(),800); }
+    function createBalloon() {
+      if (!running) return; const color = Math.random() < .62 ? target : colors[Math.floor(Math.random()*colors.length)]; const b=document.createElement('div');
+      b.className=`balloon ${color.bg}`; b.dataset.colorId=color.id; b.style.left=`${Math.random()*82+6}%`; b.style.animationDuration=`${(Math.random()*3.5+5).toFixed(2)}s`; b.innerHTML='<span class="balloon-knot"></span>';
+      const pop = (e) => { e.preventDefault(); if(!running) return; ensureAudio(); const correct=b.dataset.colorId===target.id; if(correct){score++;scoreEl.textContent=score;playSound('pop');setTimeout(()=>playSound('yay'),90);showFeedback('أحسنت! ⭐','#fef08a');floatPoints(b,1);setNextTarget();}else{score=Math.max(0,score-1);scoreEl.textContent=score;playSound('wrong');showFeedback('حاول مرة أخرى!','#fecdd3');floatPoints(b,-1);} showPopEffect(b,correct);b.remove();};
+      b.addEventListener('pointerdown',pop,{once:true}); b.addEventListener('animationend',()=>b.remove()); game.appendChild(b);
+    }
+    function updateTimer() { seconds--; timerEl.textContent=seconds; progress.style.width=`${(seconds/60)*100}%`; if(seconds<=10)timerEl.classList.add('timer-danger'); if(seconds<=0)endGame(); }
+    function startGame() { ensureAudio(); score=0;seconds=60;running=true;scoreEl.textContent='0';timerEl.textContent='60';timerEl.classList.remove('timer-danger');progress.style.width='100%';game.innerHTML='';startScreen.classList.add('hidden');endScreen.classList.add('hidden');setNextTarget();createBalloon();clearInterval(spawnTimer);clearInterval(clockTimer);spawnTimer=setInterval(createBalloon,850);clockTimer=setInterval(updateTimer,1000); }
+    function endGame() { if(!running)return;running=false;clearInterval(spawnTimer);clearInterval(clockTimer);game.innerHTML='';finalScore.textContent=score;endScreen.classList.remove('hidden');playSound('end'); }
+    soundBtn.addEventListener('click',()=>{soundEnabled=!soundEnabled;soundBtn.textContent=soundEnabled?'🔊':'🔇';soundBtn.classList.toggle('opacity-50',!soundEnabled);if(soundEnabled)ensureAudio();});
+    document.getElementById('start-btn').addEventListener('click',startGame); document.getElementById('restart-btn').addEventListener('click',startGame);
+  </script>
+</body>
+</html>
